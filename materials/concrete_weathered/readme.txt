@@ -1,0 +1,1 @@
+about these materials and textures: the use of them is free for private and commercial projects. if you used them in one of your projects, a note about the author be very appreciated :)markus groeteke3dworks visual computingwww.3dworks.com

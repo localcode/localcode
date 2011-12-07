@@ -1,0 +1,35 @@
+FS:x3nnn	Yellows
+		
+Color #	        Comment
+		
+FS:33070	Olive		
+FS:33245	Ochre		
+FS:33275	Gold Brown (Leather)		
+FS:33303			
+FS:13432	Chrome Yellow		
+FS:33432	Dark Yellow		
+FS:33434	Yellow Ochre		
+FS:33440	Dark Yellow		
+FS:33446	Sand		
+FS:33448	Light Stone		
+FS:33481	Zinc Chrome Yellow		
+FS:33522	Light Tan		
+FS:33531	Yellow		
+FS:33531	Matt Pale Stone		
+FS:33538	Chrome Yellow		
+FS:33538	Insignia Yellow		
+FS:33564	French Beige		
+FS:23578	Buff		
+FS:33591	Yellow		
+FS:23594	Beige		
+FS:33613	Radome Tan		
+FS:33617	Russian Tan		
+FS:33637	Russian Yellow		
+FS:33655	Blue Angels Yellow		
+FS:33690	Light Tan		
+FS:33697	Pale Cream		
+FS:33711	USMC Sand		
+FS:33717	Linen		
+FS:33722	Tan		
+FS:33798	Desert Sand		
+FS:33814	Pale Yellow		

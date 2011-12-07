@@ -1,0 +1,15 @@
+FS:x1nnn	Reds
+		
+Color #	       Comment		
+FS:31090	Beige Brown		
+FS:31105	Red		
+FS:31136	Insignia Red		
+FS:31136	Matt Scarlett		
+FS:31302	Vermillion		
+FS:21310	Scarlet		
+FS:31350	Red		
+FS:31400	Red Orange		
+FS:31433	Israeli Early Tan		
+FS:31575	Russian Tan		
+FS:31630	Pink		
+FS:31643	Flesh		

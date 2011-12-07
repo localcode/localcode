@@ -1,0 +1,38 @@
+FS:x5nnn	Blues
+		
+Color #	        Comment		
+FS:15042	Glossy Sea Blue		
+FS:35042	Sea blue		
+FS:35042	Flat sea blue		
+FS:35044	Insignia blue		
+FS:35045	Dark blue		
+FS:35050	Blue Angels blue		
+FS:35052	Prussian Blue		
+FS:35053	Israeli Early Camouflage Blue		
+FS:35056			
+FS:25095	Flat Blue		
+FS:35095	Royal Blue		
+FS:15102	USAAC Blue		
+FS:25102	Medium Blue		
+FS:35109	Blue		
+FS:35164	Intermediate Blue		
+FS:35177	Medium blue		
+FS:35180	Light Blue		
+FS:35182	Pale Blue		
+FS:35183	Bright blue		
+FS:15187	Pale Blue		
+FS:35189	Dark Blue Grey (PRU Blue)		
+FS:35200	USSR Underside Blue		
+FS:35231	Azure		
+FS:35237	Dk blue/grey		
+FS:35240	French Mirage Blue		
+FS:35250	Deep Sky Blue		
+FS:25352	Light Green Blue		
+FS:35352	Pale Blue		
+FS:35414	Blue		
+FS:35450	Air Superiority Blue		
+FS:25526	Light Sea Grey		
+FS:35526	Aircraft Blue		
+FS:35526	Light blue		
+FS:35550	RAAF K3/195 Sky Blue		
+FS:35622	Israeli Light Blue		

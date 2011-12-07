@@ -1,0 +1,1271 @@
+﻿Option Explicit
+'Maxwell Extract MXS
+'All options can be set in the Main() subroutine
+'IMPORTANT: Once script starts, please do not click anywhere else or work in any other program because it will disrupt the loop
+
+Call Main()
+Sub Main()
+
+	'------------------------------- Dimension All Variables --------------------------------------------
+	Dim DataSourceName, DataSourceTable, CNNColumnName, IDColumnName, StartIDn, RunOnce, RunOneCNN, ChosenCNN
+	Dim ImportFileNames, ImportFilePaths, SaveFilePath
+	Dim xRes, yRes
+	Dim BGFileName, BGFilePath, BGLayerName, BGFileType
+	Dim MAXFileName, MAXFileType, SL, Time, ViewLineYN, ViewLineLayer, ZoomObjects, ZoomFactor, CamRightRotateAng, CamUpRotateAng
+	Dim EnableRedraw, DeleteObjectsAfterEachLoop
+	
+	'------------------------------- Database --------------------------------------------
+	DataSourceName = "UnacceptedStreetsNBD"
+	'Data Source Name can be found:
+	'Windows 32-bit: Control Panel -> Administrative Tools -> Data Sources (ODBC)
+	'Windows 64-bit: C:\Windows\SysWoW64\Odbcad32.exe
+	'or just search for ODBC
+
+	DataSourceTable = "UnacceptedStreetsNBD"
+	'The name of the table in your Microsoft Access File
+
+	CNNColumnName = "CNN"			'the unique number that corresponds to the street/parcel/etc. in the access file.  This is the number that will be used in all file name formats: BasenameCNN#
+	IDColumnName = "FID_Text" 		'the row number in the access file
+	
+	RunOnce = True					'to only run the script on one street/parcel/etc.
+	StartIDn = 1 					'Starting IDn = 1, you can specify which row in the access file you would like to start on
+	ChosenCNN = Null				'a CNN that you would like to run, else set to null. Note that if you only want to run this CNN, set RunOnce = True
+	
+	'------------------------------- Directories --------------------------------------------
+	'Base name of the main files: "AxoPrep110000" has a base name of "AxoPrep"
+	'note: last element in array does not have a comma
+	ImportFileNames = array(_
+		"AxoPrep",_
+		"BaseFile",_
+		"terrainMesh"_
+		)	
+	'The corresponding directory of the location of the files
+	'note: last element in array does not have a comma
+	ImportFilePaths = array(_
+		"C:\LocalCodeFullBatch\AxoPrep\",_
+	"C:\LocalCodeFullBatch\BaseFiles\",_
+	"C:\LocalCodeFullBatch\terrainMeshes\"_
+	)
+
+	'the location to save the MXS files
+	SaveFilepath = "C:\LocalCodeFullBatch\Extracts\"
+	
+	'------------------------------- Terrain --------------------------------------------	
+	BGFileName = "BG"							'Base name of the background images
+	BGFileType = ".png"							'the image type of the background images
+	BGFilePath = "C:\LocalCodeFullBatch\BG\"	'directory of the location of the background images
+	BGLayerName = "TerrainMesh"					'the layer with the terrain surface on which to project the background images onto
+	
+	'------------------------------- View Options --------------------------------------------	
+	'Angle of View
+	ViewLineYN = False							'is there a viewline to set the exact perspective, if there is no viewline, a Zoom Extents will be used
+	ViewLineLayer = "viewLine"					'the layer name the viewline is on
+	CamRightRotateAng = 0						'rotate the view to the right by a certain degree
+	CamUpRotateAng = 0							'rotate the view up by a certain degree
+	
+	'Zoom of View
+	'An array of layers with objects that you would like to zoom to
+	ZoomObjects = array("BuildingVolumes",_
+		"victorygardens",_
+		"grass1",_
+		"grass2",_
+		"trees",_
+		"lightgrayhardscape",_
+		"creamhardscape",_
+		"orchard",_
+		"berm",_
+		"wetlands",_
+		"core",_
+		"PathSurface",_
+		"StreetLights",_
+		"Benches",_
+		"RaisedCoreVolume",_
+		"BuildingVolumnes",_
+		"People"_
+		)
+	
+	ZoomFactor = 1								'Final adjustment to zoom: how much to zoom in or out, no zoom = 1
+	
+	'------------------------------- Maxwell Export Options --------------------------------------------	
+	'Note: more options can be set in maxwell itself
+	MAXFileName = "MaxwellRender"				'the base name for the output image
+	MAXFileType = ".png"						'the image type of the rendering
+	xRes = 100									'image x-resolution, make sure that the maxwell settings resolution is based on viewport
+	yRes = 100 									'image y-resolution, make sure that the maxwell settings resolution is based on viewport
+	SL = 12										'sampling level of each image
+	time=9999									'time to render each street in minutes
+	
+	'------------------------------- Maxwell Materials Options --------------------------------------------	
+	'Make sure to load materials first.
+	'If you have a material library saved:
+	'Maxwell -> Plugin Windows -> Scene Manager
+	'In the materials tab: Right-click And Import Library
+	'Note: If you are transferring materials from one computer To a second computer, you have To put the materials in the exact same directory as was In the first computer.
+	'      Another solution would be to put all the materials into the folder where the MXS.
+	'      Or you can open the materiallibrary file (.mxl) with notepad and change the directory by a find And replace.
+
+	'Maxwell Material Name -------------------------------------------- Corresponding Layer to apply the material
+	Dim m(15)									:						Dim mlayer(15)
+		
+	m(0) = "Lichen Tree Bark"					: 						mlayer(0) = "victorygardens"
+	m(1) = "wall"								:						mlayer(1) = "grass1"		
+	m(2) = "boden_teppich"						:						mlayer(2) = "grass2"
+	m(3) = "md_boden"							:						mlayer(3) = "trees"
+	m(4) = "grass"								:						mlayer(4) = "lightgrayhardscape"
+	m(5) = "Mud"								:						mlayer(5) = "creamhardscape"
+	m(6) = "dry_grass"							:						mlayer(6) = "orchard"
+	m(7) = "Ground03_Grass"						:						mlayer(7) = "berm"
+	m(8) = "Mossi_bark"							:						mlayer(8) = "wetlands"
+		
+	m(9) = "corten_it_dark"						:						mlayer(9) = "Core"
+		
+	m(10) = "bricks_with_grass"					:						mlayer(10) ="PathSurface"
+	m(11) = "streetlights"						:						mlayer(11) ="StreetLights"
+	m(12) = "benches"							:						mlayer(12) ="Benches"
+		
+	m(13) = "corten_it_dark"					:						mlayer(13) = "RaisedCoreVolume"
+	m(14) = "BuildingsGray"						:						mlayer(14) = "BuildingVolumes"
+	m(15) = "BlackPeople"						:						mlayer(15) = "People"
+
+	
+	'------------------------------- Misc Options --------------------------------------------
+	EnableRedraw = False				'would you like to see the geometry being made? Set to False to speed up the loop
+	DeleteObjectsAfterEachLoop = False	'useful if you would like to see the end product after running the script for one CNN.  Otherwise set to True for batch extract
+	
+	'------------------------------- Run the Script with the above options set --------------------------------------------
+	Call MainFunction(EnableRedraw, DataSourceName,DataSourceTable, BGFileName, BGFilePath, BGFileType, BGLayerName, CNNColumnName, IDColumnName, StartIDn, RunOnce, ChosenCNN, ImportFileNames, ImportFilePaths, SaveFilePath, xRes, yRes, MaxFileName, MaxFileType, SL, Time, m, mlayer, ViewLineYN, ViewLineLayer, ZoomFactor, ZoomObjects, CamRightRotateAng, CamUpRotateAng, DeleteObjectsAfterEachLoop)
+	
+End Sub
+
+Function MainFunction(EnableRedraw, DataSourceName,DataSourceTable, BGFileName, BGFilePath, BGFileType, BGLayerName, CNNColumnName, IDColumnName, StartIDn, RunOnce, ChosenCNN, ImportFileNames, ImportFilePaths, SaveFilePath, xRes, yRes, MaxFileName, MaxFileType, SL, Time, m, mlayer, ViewLineYN, ViewLineLayer, ZoomFactor, ZoomObjects, CamRightRotateAng, CamUpRotateAng, DeleteObjectsAfterEachLoop)
+	
+	'	Call rhino.command("-_SetCurrentRenderPlugIn ""Maxwell for Rhino 4"" ")
+	Call DeleteObjectsByType(256)	'sometimes Maxwell creates a light when you turn it on
+	
+	Call Rhino.ViewDisplayMode (0)	'so that it runs faster because it takes more time to look at it in say rendered view
+	'title of the view (if ommited, the current view is used)|display mode
+	'0 Wireframe.
+	'1 Shaded.
+	'2 Render Preview.
+		
+	'------------------------------- Data Source: ODBC --------------------------------------------
+	
+	Const adOpenStatic = 3
+	Const adLockOptimistic = 3
+	Const adUseClient = 3
+	
+	Dim objConnection, objRecordset
+	Set objConnection = CreateObject("ADODB.Connection")
+	Set objRecordset = CreateObject("ADODB.Recordset")
+
+	objConnection.Open "DSN=" & DataSourceName	'*UNACCEPTED STREETS DATABASE
+	objRecordset.CursorLocation = adUseClient
+	objRecordset.Open "SELECT * from " & DataSourceTable, objConnection, adOpenStatic, adLockOptimistic  'make sure to use right name for your server and table *UNACCEPTED STREETS TABLE
+
+	Dim MoveOverIDn
+	If StartIDn <= 1 Then
+		MoveOverIDn = 0
+	Else
+		MoveOverIDn = StartIDn-1
+	End If
+		
+	objRecordSet.Move MoveOverIDn	'||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+
+
+	If EnableRedraw = False Then
+		Call Rhino.EnableRedraw(False)   'keeps script from drawing each thing as it runs
+	End If
+	
+	Do Until objRecordset.EOF
+		On Error Resume Next 
+		
+		Call AllLayersVisible()
+		Call rhino.CurrentLayer ("Default")
+		
+		Dim IDn, CNN
+		IDn = objRecordset.Fields.Item(IDColumnName)					'row number of database: 1,2,3,4,5,6
+		CNN	= objRecordset.Fields.Item(CNNColumnName)					'the unique ID of the parcel
+		If Not isnull(ChosenCNN) Then
+			CNN = ChosenCNN
+		End If
+		
+		Call rhino.print("--------------------------------- ID = " & IDn & "---------------------------------")
+		Call rhino.print("--------------------------------- CNN = " & CNN & "---------------------------------")
+		'msgbox IDn & "   " & CNN
+		
+		'----------------------------------- Import Files --------------------------------------------------------------
+
+		If Not isnull(ImportFileNames) Then
+			Dim i : i=0
+			For i=0 To ubound(ImportFileNames)
+				Call import(ImportFilePaths(i), ImportFileNames(i) & CNN)
+			Next
+		End If
+			
+		'----------------------------------- Camera and View ------------------------------------------------------------------------------
+			
+		Call makeviewport("Maxwell Rendering", xRes, yRes)
+		'	'Number, The direction to rotate the view, where 0 = right, 1 = left, 2 = down, and 3 = up. The default is 0 = right.
+		Call Rhino.RotateView(,0,CamRightRotateAng)		'rotate the view to the right
+		Call Rhino.RotateView(,3,CamUpRotateAng)	'rotate the view up and down
+
+		If ViewLineYN = True Then
+			Dim viewline
+			viewline = rhino.ObjectsByLayer(ViewLineLayer, False)
+			
+			Dim camStart, camEnd
+			camStart = rhino.curvestartpoint(viewLine(0))
+			camEnd = rhino.CurveEndPoint(viewLine(0))		
+
+			Call Rhino.ViewCameraTarget("Maxwell Rendering",camStart,camEnd)
+		Else
+			Call Rhino.ZoomExtents()
+		End If
+
+		'----------------------------------- Zoom to an Objects ---------------------------------------------------------------------------------
+		Call Rhino.UnselectAllObjects()
+		Dim j : j=0
+		For j=0 To ubound(ZoomObjects)
+			Call Rhino.ObjectsByLayer(ZoomOBjects(j), True)
+		Next
+		Call Rhino.ZoomSelected()
+		Call Rhino.UnselectAllObjects()
+
+		Call Rhino.command("Z F " & ZoomFactor, False)
+		
+		'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+					
+		'----------------------------------- BG Image ---------------------------------------------------------------------------------
+		Dim terrain
+		terrain = rhino.ObjectsByLayer("TerrainMesh")
+
+		Call contextimagebg(BGLayerName, BGFileName & CNN & BGFileType, BGFilePath)
+		Call ApplyPlanarMapping(terrain(0),1,1)
+
+		'----------------------------------- Apply Maxwell materials and Extract MSX files for batch render
+		'	Call BasePlane(z1,z2)
+		Call rhino.command("-_SelBadObjects Delete ")	'there was a street with badobjects and it couldn't export the mxs, this takes care of that
+		Call rhino.command("-_SelDup Delete ")			'maxwell renders weird textures when there are overlapping surfaces
+	
+		Call ApplyMaxwellMaterials(m, mlayer)
+		Call MaxwellExtractMXS(MaxFileName, MaxFileType, CNN, SaveFilePath, SL, Time)
+
+		'----------------------------------- Reset for next run
+		Call rhino.CurrentLayer ("Default")
+		Call AllLayersVisible()
+		
+		If DeleteObjectsAfterEachLoop = True Then
+			Call Rhino.Command("_SelAll _Delete ")		'delete the generated objects
+		End If
+	
+		Call rhino.Print("----------------------------------------------------------- IDn#" & IDn)
+			
+		'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+
+		'----------------------------------- Deallocate the Memory ------------------------------------------------------------------------------
+		'variables
+		'-------------------------------------------------------------
+		'arrays
+		
+		'----------------------------------- Endings ------------------------------------------------------------------------------
+		If RunOnce = True Then
+			objRecordset.Movelast	'this will force the script to stop after one run
+		End If
+
+		objRecordset.Movenext		'move to the next record set
+
+	Loop
+	
+	Call Rhino.EnableRedraw(True)	'Re-enable EnableRedraw for normal Rhino modeling operations
+	
+	objRecordset.Close
+	objConnection.Close
+	
+End Function
+
+Function ApplyMaxwellMaterials(m,layer)
+	
+	
+		
+	Call rhino.unselectallobjects()
+	
+	'	Call rhino.command("-_SetCurrentRenderPlugIn ""Maxwell for Rhino 4""")
+	'	Call DeleteObjectsByType(256)	'sometimes Maxwell creates a light when you turn it on
+
+
+	'----------------- Distribute the Surfaces
+	'		Dim landSrfs
+	'		landSrfs = rhino.objectsbylayer("LandscapeSurface")
+	'		
+	'		If Not isnull(landSrfs) Then
+	'			'Call RandomDistribution(landSrfs,0,35.5,14.5,12.5,37.5)
+	'			Call LinearDistribution(landSrfs,layer,0,15,15,14,14,14,14,14)
+	'		End If
+		
+	'----------------- apply the maxwell material
+	If Not isnull(m) And Not isnull(layer) Then
+					
+		Dim i
+		For i=0 To ubound(m)+1
+			If Not isnull(m(i)) And Not isnull(layer(i)) Then
+				Call rhino.UnselectAllObjects()
+				Call Rhino.Command("-_Maxwell_SetCurrentMaterial " & chr(34) & m(i) & chr(34))
+				Call Rhino.Command("-_Maxwell_SelectObjectsAndApplyCurrentMaterial -_SelLayer " & chr(34) & layer(i) & chr(34) & " _Enter")
+				Call rhino.UnselectAllObjects()
+			End If
+			'Prompts for an object selection, and applies the current Material to the selected objects.
+						
+			'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+			'Material Tiling
+					
+			Dim Srfs
+			Srfs = rhino.objectsbylayer(layer(i))
+					
+			If Not isnull(Srfs) And m(i)<>"wall" And m(i)<>"md_boden" And m(i)<>"concrete_scratched" And m(i)<>"md_boden19840026" And m(i)<>"TerrenoMixto" And m(i)<>"preview1" And m(i)<>"ivy_LUC" And m(i)<>"Lichen Tree Bark" Then
+				'to stop the tiling for certain materials because it looks better
+					
+				Dim srf
+				Dim TileUV
+				For Each srf In srfs
+							
+					TileUV = UV(srf)
+					
+					'	msgbox TileUV(0) & "," & TileUV(1)
+			
+						
+					If layer(i)="wetlands" Then
+							
+						Call applycylindricalmapping(srf,1,1)
+							
+					ElseIf layer(i)="PathSurface" Then
+							
+						'	Call applyboxmapping(srf,TileUV(0),TileUV(1))
+						Call ApplyCylindricalMapping(srf,TileUV(0),TileUV(1))
+							
+					Else
+							
+						Call applyboxmapping(srf,TileUV(0),TileUV(1))
+		
+					End If
+					
+				Next
+						
+			End If
+						
+			'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+						
+		Next
+		
+		'---------------------------- Deallocate the Memory ---------------------------- 	
+		'arrays
+		Erase m
+		Erase layer
+		'variables
+		Set i				=	Nothing
+		'---------------------------- Deallocate the Memory ---------------------------- 	
+					
+	End If
+
+
+	Call Rhino.UnselectAllObjects()	'deselect the object just in case
+
+End Function
+
+Function MaxwellExtractMXS(MaxFileName, MaxImageType, IDn, filepath, SL, Time)
+	
+	'---------------------------------------------------------------------------------------- Rendering
+	'BaseFileName	'base name of the files: ex. "streets", "parcels"
+	'IDn 			'street # 1,2,3,4,5, etc.
+	'Filepath		'location to save the rendered images and .mxs files
+	
+	'	Call rhino.command("-_SetCurrentRenderPlugIn ""Maxwell for Rhino 4""")
+	'	Call DeleteObjectsByType(256)	'sometimes Maxwell creates a light when you turn it on
+		
+	Call rhino.unselectallobjects()
+	
+	Dim ImageName
+	Dim MXSName
+	
+	ImageName 	= (MaxFileName  & IDn & MaxImageType)
+	MXSName 	= (MaxFileName  & IDn & ".mxs")
+	
+	'---------------------------------- Render Settings
+	'you can pre-set these in the scene manager so you really don't have to set them here.
+		
+
+	Dim RenderSilent	'to suppress the mxcl.exe, the render window
+	RenderSilent = "yes"
+
+	'----------------------------------
+
+	Call Rhino.Command("-_Maxwell_CameraSettings R V _Enter")	'changes the resolution to viewport mode, thus the resolution will be xRes and yRes
+	Call Rhino.Command("-_Maxwell_RenderSettings WriteMXI=No SamplingLevel=" & SL & " Time=" & time & " _Enter ")
+	Call Rhino.Command("-_Maxwell_OutputSettings RenderSilent=" & RenderSilent & " _Enter")
+	Call Rhino.Command("-_Maxwell_OutputSettings ImagePath " & chr(34) & Filepath & ImageName & chr(34) & " _Enter ")
+	Call Rhino.Command("-_Maxwell_OutputSettings ScenePath " & chr(34) & Filepath & MXSname & chr(34) & " _Enter ")
+
+	'---------------------------------------------------------------------------------------- 
+
+	'extract MXS
+	'Call rhino.command("-_Render ")
+	Call Rhino.Command("-_Maxwell_RenderToMXS RenderScene _Enter ")
+
+	'---------------------------------------------------------------------------------------- 
+	'reset the base file locations so that we don't accidently overwrite a previous file we wanted to keep
+	Dim BaseImageName	:	BaseImageName	= "baseImage.tif"
+	Dim BaseMXSName		:	BaseMXSName 	= "baseImage.mxs"
+	Dim BaseFilePath	:	BaseFilePath 	= "C:\"
+	
+	Call Rhino.Command("-_Maxwell_OutputSettings ImagePath " & chr(34) & BaseFilePath & BaseImageName & chr(34) & " _Enter ")
+	Call Rhino.Command("-_Maxwell_OutputSettings ScenePath " & chr(34) & BaseFilePath & BaseMXSName & chr(34) & " _Enter ")
+
+	'---------------------------- Deallocate the Memory ---------------------------- 	
+	Set ImageName = Nothing
+	Set MXSName  = Nothing
+	Set RenderSilent = Nothing
+	Set BaseImageName = Nothing
+	Set BaseMXSName = Nothing
+	Set BaseFilePath = Nothing
+	'---------------------------- Deallocate the Memory ---------------------------- 	
+	
+	Call Rhino.UnselectAllObjects()	'deselect the object just in case
+	
+End Function
+
+Function LinearDistribution(srfs,layername,f0,f1,f2,f3,f4,f5,f6,f7)
+	'Distributing a list of objects by selecting different numbers of objects in sequence of the array of objects and then putting each into layers
+	
+	If Not isnull(srfs) Then
+		
+		Call rhino.UnselectAllObjects()
+		
+		'-------------------------------- percentages in sequence ------------------------
+		'percentage of each is based on f(n)-f(n-1)
+		'ex. grass1 = f2-f1 = 20-10 = 10% will be grass1 material
+		
+		Dim numSrf
+		numSrf = ubound(srfs)
+
+		
+		Dim F(8)				:		Dim M(8) 
+
+		F(0) = f0				:		M(0) =	layername(0)
+		F(1) = (F(0)+f1)		:		M(1) = 	layername(1)
+		F(2) = (F(1)+f2)		:		M(2) = 	layername(2)
+		F(3) = (F(2)+f3)		:		M(3) = 	layername(3)
+		F(4) = (F(3)+f4)		:		M(4) = 	layername(4)
+		F(5) = (F(4)+f5)		:		M(5) = 	layername(5)
+		F(6) = (F(5)+f6)		:		M(6) = 	layername(6)
+		F(7) = (F(6)+f7)		:		M(7) = 	layername(7)
+		'           +
+		'------------------------
+		'             100
+		
+		Dim i : i=0
+		Dim j : j=0
+
+		For i=0 To ubound(srfs)
+			For j=0 To ubound(F)
+
+				'F(0)<>0													'for the case if first factor = 0
+				If F(j)<>0 And i<=ceil(numSrf*(F(j)/100)) Then				'factor*percent/100
+
+					Call Layer(srfs(i),M(j),0,F(j),0)
+					j=ubound(F)
+					
+				End If
+				
+			Next
+		Next
+		
+		Call rhino.UnselectAllObjects()
+		
+		
+	End If
+	
+End Function
+
+Function RandomDistribution(srfs,f0,f1,f2,f3,f4)
+	'Distributing a list of objects by putting a random selection of objects into layers based on a certain percentage
+	
+	If Not isnull(srfs) Then
+		
+		Call rhino.UnselectAllObjects()
+		
+		'-------------------------------- distribution percentages ------------------------
+		'percentage of each is based on f(n)-f(n-1)
+		'ex. grass1 = f2-f1 = 20-10 = 10% will be grass1 material
+	
+		Dim F(4)			:		Dim M(4) 
+
+		F(0) = f0			:		M(0) =		"terraces"
+		F(1) = F(0)+f1		:		M(1) = 		"vegetables"
+		F(2) = F(1)+f2		:		M(2) = 		"fruits"
+		F(3) = F(2)+f3		:		M(3) = 		"marketspace"
+		F(4) = F(3)+f4		:		M(4) = 		"gardenspace"
+		'          +
+		'---------------
+		'           100
+
+		Dim i : i=0
+		Dim j : j=0
+		Dim rndnum
+	
+		For i=0 To Ubound(srfs)
+			
+			rndnum = rnd()*100
+
+			For j=0 To ubound(F)
+				
+				If rndnum <= ceil(F(j)) Then
+					Call Layer(srfs(i),M(j),0,F(j),0)
+					j=ubound(F)
+				End If		
+
+			Next
+		Next
+
+		Call rhino.UnselectAllObjects()
+	
+	End If
+
+End Function
+
+Function Layer(objects,layername,R,G,B)
+	'white - rgb(255,255,255)
+	'black - rgb(0,0,0)
+	'red - rgb(255,0,0)
+	
+	'-------------------------- --------- safty
+	If isnull(R) Or Not isnumeric(R) Then
+		R = 0
+	End If
+	If isnull(G) Or Not isnumeric(G) Then
+		G = 0
+	End If
+	If isnull(B) Or Not isnumeric(B) Then
+		B = 0
+	End If
+	
+	If Not isnull(objects) Then
+	
+		Call rhino.unselectobjects()
+	
+		If Not Rhino.IsLayer(layername) Then
+			Call rhino.addlayer(layername,rgb(R,G,B))
+		End If
+	
+		Call rhino.objectlayer(objects,layername)
+
+		Call rhino.unselectobjects()
+
+	
+	End If
+	
+End Function
+
+Function DeleteObjectsByType(TypeNumber)
+
+	Dim Objects
+	Objects = Rhino.ObjectsByType (TypeNumber,False)
+	
+	If isarray(Objects) Then
+		Call rhino.DeleteObjects(Objects)
+	End If
+
+	'	Value
+	'	Description
+	' 
+	'	0
+	'	All objects
+	' 
+	'	1
+	'	Point
+	' 
+	'	2
+	'	Point cloud
+	' 
+	'	4
+	'	Curve
+	' 
+	'	8
+	'	Surface Or single-face brep
+	' 
+	'	16
+	'	Polysurface Or multiple-face
+	' 
+	'	32
+	'	Mesh
+	' 
+	'	256
+	'	Light
+	' 
+	'	512
+	'	Annotation
+	' 
+	'	4096
+	'	Instance Or block reference
+	' 
+	'	8192
+	'	Text dot object
+	' 
+	'	16384
+	'	Grip object
+	' 
+	'	32768
+	'	Detail
+	' 
+	'	65536
+	'	Hatch
+	' 
+	'	131072
+	'	Morph control
+	' 
+	'	134217728
+	'	Cage
+	' 
+	'	268435456
+	'	Phantom
+	' 
+	'	536870912
+	'	Clipping plane
+	
+	'---------------------------- Deallocate the Memory ---------------------------- 
+	'	Erase Objects
+	'---------------------------- Deallocate the Memory ---------------------------- 	
+	
+End Function
+
+Function makeviewport(name, mwidth, mheight)
+
+	Call rhino.unselectallobjects()
+	
+	Call rhino.command("-_4View ZEA ")
+	
+	Call rhino.Command("-_NewViewport Name " & chr(34) & name & chr(34) & " width=" & mwidth & " height=" & mheight & " _Enter")
+	
+	Call Rhino.ViewProjection (,2)		'change projection to perspective
+	Call Rhino.ViewCameraLens (,900)	'for parallel issue with maxwell
+	
+	
+	Call rhino.command("-_ZE ")
+	
+	
+	Call rhino.unselectallobjects()
+	
+End Function
+
+Function import(filepath,filename)
+
+	Call rhino.UnselectAllObjects()
+	
+	Call rhino.command("-_Import "  & chr(34) & filepath & filename & chr(34) & " _Enter")
+	
+	'	importfile = rhino.LastCreatedObjects()
+	
+	Call rhino.UnselectAllObjects()
+
+	Dim cmdResult
+	cmdResult = Rhino.LastCommandResult()	'to check if the last command was successful
+	'	0
+	'	Success.  The command successfully completed.
+	' 
+	'	1
+	'	Cancel.  The command was cancelled by the user.
+	' 
+	'	2
+	'	Nothing.  The command did Nothing (but it was Not cancelled).
+	' 
+	'	3
+	'	Failure.  The command failed (i.e. bad input, computational problem, etc).
+	' 
+	'	4
+	'	Unknown command.  The command was Not found.
+
+	import = cmdResult
+
+End Function
+
+Function InsertScale(x1,y1,x2,y2)
+
+	If Not Rhino.IsLayer("Scale") Then
+		Call Rhino.addlayer("Scale",RGB(0, 0, 0))
+	End If
+	
+	Dim x,y
+	Dim arrScale1, arrScale2, arrScale3, arrScale4, arrScale5, arrScale6, arrScale7, arrScale8, arrScale9, arrScale10
+	Dim arrTexta, arrTextb, arrTextc, arrTextd, arrTexte
+
+	Dim textheight	'height of text
+
+	Dim lng		'length from (x1,y1) to (x2,y2)
+	lng = sqr((x1-x2)^2+(y1-y2)^2)
+
+	Dim dy		'height down
+	Dim hy 		'height of scale
+	Dim tb 
+	Dim	tc
+	Dim td
+	Dim te
+
+	If lng>=100 Then					'length of scale = 100
+		textheight = 2.5
+		dy = 25 'height down
+		hy = 5  'height of scale
+		tb=5
+		tc=25
+		td=50
+		te=100
+	ElseIf lng>=50 And lng<100 Then		'length of scale = 50
+		textheight = 1.5
+		dy = 15 'height down
+		hy = 5  'height of scale
+		tb=5
+		tc=10
+		td=25
+		te=50
+	ElseIf lng<50 Then					'length of scale = 25
+		textheight = 1.5
+		dy = 15 'height down
+		hy = 2.5  'height of scale
+		tb=5
+		tc=10
+		td=15
+		te=25
+	End If
+
+	If y1>y2 And x1>x2 Then			'2/1
+		x=x2
+		y=y2	
+	ElseIf x2>x1 And y2>y1 Then		'1/2
+		x=x1
+		y=y1	
+	ElseIf x2>x1 And y1>y2 Then		'1\2
+		x=x1
+		y=y2	
+	ElseIf x1>x2 And y2>y1 Then		'2\1
+		x=x2
+		y=y1	
+	End If
+
+	arrScale1 = array(x,		y-dy,		0)
+	arrScale2 = array(x,		y-dy-hy,	0)
+	arrScale3 = array(x+tb,		y-dy-hy,	0)
+	arrScale4 = array(x+tb,		y-dy,		0)
+	arrScale5 = array(x+tc,		y-dy,		0)
+	arrScale6 = array(x+tc,		y-dy-hy,	0)
+	arrScale7 = array(x+td,		y-dy-hy,	0)
+	arrScale8 = array(x+td,		y-dy,		0)
+	arrScale9 = array(x+te,		y-dy,		0)
+	arrScale10 = array(x+te,	y-dy-hy,	0)
+	
+	'-----------------------------------------------------------------------------------------------------------------
+	
+	Dim sb,sc,sd,se
+
+	If tb<10 Then
+		sb=1
+	ElseIf tb>=10 And tb<99 Then
+		sb=2
+	Else
+		sb=5
+	End If
+
+	If tc<10 Then
+		sc=1
+	ElseIf tc>=10 And tc<99 Then
+		sc=2
+	Else
+		sc=5
+	End If
+	
+	If td<10 Then
+		sd=1
+	ElseIf td>=10 And td<99 Then
+		sd=2
+	Else
+		sd=5
+	End If
+	
+	If te<10 Then
+		se=1
+	ElseIf te>=10 And te<99 Then
+		se=2
+	Else
+		se=5
+	End If
+
+	'one digit   = -1
+	'two digit 	 = -2
+	'three digit = -5
+
+	'-----------------------------------------------------------------------------------------------------------------
+	
+	arrTexta = array(x-1,		y-dy+textheight,	0)		'text moved over by -1 in the x and textheight above the scale line
+	arrTextb = array(x+(tb-sb),	y-dy+textheight,	0)		'text moved over by -sb in the x and textheight above the scale line
+	arrTextc = array(x+(tc-sc),	y-dy+textheight,	0)		'text moved over by -sc in the x and textheight above the scale line
+	arrTextd = array(x+(td-sd),	y-dy+textheight,	0)		'text moved over by -sd in the x and textheight above the scale line
+	arrTexte = array(x+(te-se),	y-dy+textheight,	0)		'text moved over by -se in the x and textheight above the scale line
+
+	Dim arrScaleBox, strScaleCrv
+	arrScaleBox = array(arrScale1, arrScale2, arrScale3, arrScale4, arrScale5, arrScale6, arrScale7, arrScale8, arrScale9, arrScale10)
+	strScaleCrv = Rhino.AddPolyline(arrScaleBox)
+
+	Dim t1,t2,t3,t4,t5
+	t1 = Rhino.AddText("0", 		arrTexta, 	textheight)
+	t2 = Rhino.AddText(CStr(tb), 	arrTextb, 	textheight)
+	t3 = Rhino.AddText(CStr(tc), 	arrTextc, 	textheight)
+	t4 = Rhino.AddText(CStr(td), 	arrTextd, 	textheight)
+	t5 = Rhino.AddText(CStr(te), 	arrTexte, 	textheight)
+
+	'Dim strScale
+	'strScale = Rhino.AddPlanarSrf(arrScale)
+	'strScale = Rhino.AddPlanarSrf(arrScale)
+	'Call Rhino.ObjectLayer(strScale, "Default")
+
+	'------------------------------------------------
+
+	Dim xend
+	xend = arrScale10
+	xend(2) = 0
+
+	If x1<x2 Then
+		xend(0) = x2
+	Else
+		xend(0) = x1
+	End If
+	
+	Call Rhino.MoveObjects (array(t1,t2,t3,t4,t5,strScaleCrv), arrScale10, xend)	'move scale from arrScaleX to xend
+	
+	'------------------------------------------------
+	
+	Call Rhino.Objectlayer(strScaleCrv,"Scale")
+	Call Rhino.Objectlayer(array(t1,t2,t3,t4,t5),"Scale")
+	
+	'------------------------------------------------
+	
+	InsertScale = array(t1,t2,t3,t4,t5,strScaleCrv)
+	
+
+	'---------------------------- Deallocate the Memory ---------------------------- 
+	Set x = Nothing
+	Set y = Nothing
+	Set sb = Nothing
+	Set sc = Nothing
+	Set sd = Nothing
+	Set se = Nothing
+	Set textheight = Nothing
+	Set lng = Nothing
+	Set dy = Nothing
+	Set hy = Nothing
+	Set tb = Nothing
+	Set tc = Nothing
+	Set td = Nothing
+	Set te = Nothing
+	Set t1 = Nothing
+	Set t2 = Nothing
+	Set t3 = Nothing
+	Set t4 = Nothing
+	Set t5 = Nothing
+	Set strScaleCrv = Nothing
+	
+	Erase arrScale1
+	Erase arrScale2
+	Erase arrScale3
+	Erase arrScale4
+	Erase arrScale5
+	Erase arrScale6
+	Erase arrScale7
+	Erase arrScale8
+	Erase arrScale9
+	Erase arrScale10
+	Erase arrScaleBox
+	Erase arrTexta
+	Erase arrTextb
+	Erase arrTextc
+	Erase arrTextd
+	Erase arrTexte
+	Erase xend
+	'---------------------------- Deallocate the Memory ---------------------------- 	
+
+End Function
+
+Function RhinoRender(IDn,filepath,resX,resY)
+	
+	'Filepath		'location to save the rendered images and .mxs files
+	
+	'---------------------------------------------------------------------------------------
+		
+	Call Rhino.RenderSettings(1+4+8)
+	'Can use in any combination ex. Call Rhino.RenderSettings(4+8) will render curves and isocurves AND dimensions and text
+	'0	None. Can also use to clear render settings
+	'1	Create shadows.
+	'2	Use lights On layers that are off.
+	'4	Render curves And isocurves.
+	'8	Render dimensions And text.
+	'If not specified, the current render settings if successful.
+	'If not specified, the previous render settings if successful.
+
+	Call Rhino.RenderColor(1,rgb(255,255,255))
+	'Rhino.RenderColor (intItem, [lngColor])
+	'intItem - Required. Number. The item you wish To either query Or change.
+	'						0 - Ambient light color.
+	'						1 - Background color.
+	'lngColor
+	'Optional. Number. The New color value. If omitted, the curreng intItem color Is returned.
+	'						0,0,160 - default gray
+	'						0,0,0 - black
+	'						255,255,255 - white
+
+	Call Rhino.RenderAntialias(2)
+	'Returns or sets render antialiasing style.  Antialiasing is a process where more than one ray is shot per pixel in an attempt to better resolve the value of the pixel.
+	'Increasing the antialiasing level can add considerable time To the overall rendering. 
+	'0 None.
+	'1 Normal And slower.
+	'2 Best And slowest.
+	'If not specified, the current render antialiasing style if successful.
+	'If not specified, the previous render antialiasing style if successful.		
+
+	'	Dim View
+	'	View = Rhino.ViewSize("Top")
+	'retrieves the resolution of the specified viewport. If none is specified, the current viewport is used.
+	'ex. Rhino.ViewSize ("perspective")
+		
+	'Call Rhino.RotateView()
+	'Rhino.RotateView ([strview [, intDirection [, dblAngle]]])
+	'strView - Optional.  String.  The title of the view.  If omitted, the current active view Is used.
+	'intDirection - Optional. Number, The direction To rotate the view, where 0 = right, 1 = left, 2 = down, And 3 = up. The Default Is 0 = right.
+	'dblAngle - Optional.  Number.  The angle To rotate. If omitted, the angle of rotation Is specified by the "Increment in divisions of a circle" parameter specified In Options command's View tab.
+
+	Call Rhino.RenderResolution(Array(resX,resY))   'change this back to "view" as dimmed above
+	'Input = Array.  An array containing two numbers identifying the resolution width And height In pixels. ex. Call Rhino.RenderResolution(Array(800,600))
+	'If Not specified, an array containing two numbers identifying the current resolution width And height In pixels.
+	'Once a resolution is specified, it will remain in that resolution even if the call is unspecified
+
+	'---------------------------------------------------------------------------------------
+	
+	Call rhino.command("-_SetCurrentRenderPlugIn ""Rhino Render""")
+		
+	Dim ImageName
+	Dim MXSName
+	
+	Dim BaseName
+	BaseName = "parcel"
+	'naming is done this way for batch rendering (4 digits):
+	If IDn<=9 Then										'1 digit
+		ImageName 	= (BaseName & "00" & IDn & ".tif")
+	ElseIf IDn>=10 And IDn<=99 Then						'2 digits
+		ImageName 	= (BaseName & "0" & IDn & ".tif")
+	ElseIf IDn>=100 And IDn<=999 Then					'3 digits
+		ImageName 	= (BaseName & IDn & ".tif")
+	End If
+	
+	
+	'---------------------------------------------------------------- Rhino Render for Curves
+	
+	Call rhino.command("Render ")
+	Call Rhino.Command("-_SaveRenderWindowAs " & chr(34) & filepath & ImageName & chr(34))	'save the file to filepath with filename Name
+	Call Rhino.Command("_CloseRenderWindow ")	'close the render window that popped up during rendering
+
+	'---------------------------- Deallocate the Memory ---------------------------- 	
+	Set ImageName = Nothing
+	Set MXSName  = Nothing
+	'---------------------------- Deallocate the Memory ---------------------------- 	
+	
+End Function
+
+Function contextimagebg(BGlayer,FileName,filepath)
+	
+	Dim BG
+	BG = rhino.objectsbylayer(BGlayer)
+	
+	Dim strObject, intIndex
+
+	strObject = BG(0)
+	
+	If Not IsNull(strObject) Then
+
+		intIndex = Rhino.ObjectMaterialIndex(strObject)
+		'	msgbox intindex
+
+		If (intIndex = -1) Then
+		
+			intIndex = Rhino.AddMaterialToObject(strObject)
+
+		End If
+		
+		If (intIndex > -1) Then
+			
+			Dim imagename
+			ImageName 	= (FileName)
+			Dim fullpath
+			fullpath = chr(34) & filepath & ImageName & chr(34)
+			Call Rhino.MaterialTexture(intIndex, fullpath)
+			
+			Call Rhino.ObjectMaterialSource(strObject,1)
+			'			0
+			'			Material from layer
+			' 
+			'			1
+			'			Material from object
+			' 
+			'			2
+			'			<unused>
+			' 
+			'			3
+			'			Material from parent
+ 
+
+
+		End If
+
+	End If
+	
+End Function
+
+Function ZoomSelectedFactor(layer,factor)
+	
+	
+	Call rhino.unselectallobjects()
+	
+	Dim arrObject, strView
+
+	arrObject = rhino.objectsbylayer(layer,True)
+	
+	If isarray(arrObject) Then
+		
+		Call rhino.SelectObjects(arrobject)
+	
+		Call rhino.command("-_ZS Z F " & factor & " ")
+	
+	End If
+	
+	Call rhino.unselectallobjects()
+
+End Function
+
+Function UV(object)
+	
+	If Not IsNull(object) Then
+
+		Dim arrBox
+		arrBox = Rhino.BoundingBox(object)
+
+		If IsArray(arrBox) Then
+
+			Dim length, width
+			
+			'3--2
+			'|  |
+			'0--1
+			
+			length = int(abs(arrBox(0)(0) - arrBox(1)(0)))
+			width = int(abs(arrBox(0)(1) - arrBox(3)(1)))
+			
+			'assuming tileU is the longer direction
+			Dim tileU, tileV
+			If length>width Then
+				tileU = length
+				tileV = width
+			Else
+				tileU = length
+				tileV = width
+			End If
+			
+			If tileU=0 Then
+				tileU=1
+			End If
+			If tileV=0 Then
+				TileV=1
+			End If
+			
+		End If
+	
+	End If
+	
+	UV = array(tileU,tileV)
+
+End Function
+
+Function ApplyBoxMapping(obj, tileU,tileV)
+
+	Call Rhino.UnselectAllObjects()
+
+	If Not isnull(obj) Then
+		
+		Call rhino.SelectObject(obj)
+		
+		Call rhino.Command("-_ApplyBoxMapping 1 _Enter Single " & tileU & " " & tileV & " ")
+	
+	End If
+	
+	Call Rhino.UnselectAllObjects()
+	
+	
+End Function
+
+Function ApplyCylindricalMapping(obj, tileU,tileV)
+
+	Call Rhino.UnselectAllObjects()
+
+	If Not isnull(obj) Then
+		
+		Call rhino.SelectObject(obj)
+		
+		Call rhino.Command("-_ApplyCylindricalMapping 1 _Enter Yes Single " & tileU & " " & tileV & " ")
+		
+	End If
+	
+	Call Rhino.UnselectAllObjects()
+	
+	
+End Function
+
+Function ApplyBoxMapping(obj, tileU,tileV)
+
+	Call Rhino.UnselectAllObjects()
+
+	If Not isnull(obj) Then
+		
+		Call rhino.SelectObject(obj)
+		
+		Call rhino.Command("-_ApplyBoxMapping 1 _Enter Single " & tileU & " " & tileV & " ")
+	
+	End If
+	
+	Call Rhino.UnselectAllObjects()
+	
+	
+End Function
+
+Function ApplyCylindricalMapping(obj, tileU,tileV)
+
+	Call Rhino.UnselectAllObjects()
+
+	If Not isnull(obj) Then
+		
+		Call rhino.SelectObject(obj)
+		
+		Call rhino.Command("-_ApplyCylindricalMapping 1 _Enter Yes Single " & tileU & " " & tileV & " ")
+		
+	End If
+	
+	Call Rhino.UnselectAllObjects()
+	
+	
+End Function
+
+Function ApplyPlanarMapping(obj, tileU,tileV)
+
+	Call Rhino.UnselectAllObjects()
+
+	If Not isnull(obj) Then
+		
+		Call rhino.SelectObject(obj)
+		
+		Call rhino.Command("-_ApplyPlanarMapping 1 _Enter Single " & tileU & " " & tileV & " ")
+	
+	End If
+	
+	Call Rhino.UnselectAllObjects()
+	
+	
+End Function
+
+Function OneLayerVisible(strLayer)
+
+	Call Rhino.CurrentLayer(strLayer)	'change current layer to the layer you want to stay open
+	
+	Dim allLayers
+	allLayers = Rhino.LayerNames()
+	
+	Dim i : i=0
+	For i=0 To ubound(allLayers)
+		Call Rhino.LayerVisible (allLayers(i),False)
+	Next
+
+
+End Function
+
+Sub AllLayersVisible()
+
+	Dim allLayers
+	allLayers = Rhino.LayerNames()
+	
+	Dim i : i=0
+	For i=0 To ubound(allLayers)
+		Call Rhino.LayerVisible (allLayers(i),True)
+	Next
+
+End Sub
+
+Function RhinoRender(BaseName,CNN,filepath,xRes,yRes)
+	'Filepath		'location to save the rendered images and .mxs files
+	
+	'---------------------------------------------------------------------------------------
+		
+	Call Rhino.RenderSettings(1+4+8)
+	'Can use in any combination ex. Call Rhino.RenderSettings(4+8) will render curves and isocurves AND dimensions and text
+	'0	None. Can also use to clear render settings
+	'1	Create shadows.
+	'2	Use lights On layers that are off.
+	'4	Render curves And isocurves.
+	'8	Render dimensions And text.
+	'If not specified, the current render settings if successful.
+	'If not specified, the previous render settings if successful.
+
+	Call Rhino.RenderColor(1,rgb(255,255,255))
+	'Rhino.RenderColor (intItem, [lngColor])
+	'intItem - Required. Number. The item you wish To either query Or change.
+	'						0 - Ambient light color.
+	'						1 - Background color.
+	'lngColor
+	'Optional. Number. The New color value. If omitted, the curreng intItem color Is returned.
+	'						0,0,160 - default gray
+	'						0,0,0 - black
+	'						255,255,255 - white
+
+	Call Rhino.RenderAntialias(2)
+	'Returns or sets render antialiasing style.  Antialiasing is a process where more than one ray is shot per pixel in an attempt to better resolve the value of the pixel.
+	'Increasing the antialiasing level can add considerable time To the overall rendering. 
+	'0 None.
+	'1 Normal And slower.
+	'2 Best And slowest.
+	'If not specified, the current render antialiasing style if successful.
+	'If not specified, the previous render antialiasing style if successful.		
+
+	'	Dim View
+	'	View = Rhino.ViewSize("Top")
+	'retrieves the resolution of the specified viewport. If none is specified, the current viewport is used.
+	'ex. Rhino.ViewSize ("perspective")
+		
+	'Call Rhino.RotateView()
+	'Rhino.RotateView ([strview [, intDirection [, dblAngle]]])
+	'strView - Optional.  String.  The title of the view.  If omitted, the current active view Is used.
+	'intDirection - Optional. Number, The direction To rotate the view, where 0 = right, 1 = left, 2 = down, And 3 = up. The Default Is 0 = right.
+	'dblAngle - Optional.  Number.  The angle To rotate. If omitted, the angle of rotation Is specified by the "Increment in divisions of a circle" parameter specified In Options command's View tab.
+
+	Call Rhino.RenderResolution(Array(xRes,yRes))   'change this back to "view" as dimmed above
+	'Input = Array.  An array containing two numbers identifying the resolution width And height In pixels. ex. Call Rhino.RenderResolution(Array(800,600))
+	'If Not specified, an array containing two numbers identifying the current resolution width And height In pixels.
+	'Once a resolution is specified, it will remain in that resolution even if the call is unspecified
+
+	'---------------------------------------------------------------------------------------
+	
+	Call rhino.command("-_SetCurrentRenderPlugIn ""Rhino Render""")
+
+	
+	Dim ImageName	
+	ImageName 	= (BaseName & CNN & ".png")
+	
+	'---------------------------------------------------------------- Rhino Render for Curves
+	
+	Call rhino.command("-_Render ")
+	Call Rhino.Command("-_SaveRenderWindowAs " & chr(34) & filepath & ImageName & chr(34))	'save the file to filepath with filename Name
+	Call Rhino.Command("_CloseRenderWindow ")	'close the render window that popped up during rendering
+
+	'---------------------------- Deallocate the Memory ---------------------------- 	
+	Set ImageName = Nothing
+	'---------------------------- Deallocate the Memory ---------------------------- 	
+	
+End Function

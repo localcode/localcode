@@ -1,0 +1,105 @@
+import os
+import shelve
+import Rhino
+import cPickle as pickle
+from rhinopythonscripts import LayerTools, FileTools
+from rhinopythonscripts.GeomTools import bakeMany
+from System.Collections.Generic import List
+from scriptcontext import doc
+from System.Drawing import Rectangle
+
+def bakeRaw( data, attributes = None, transVect=None):
+    if type(data) not in (list, tuple):
+        data = [data]
+    elif type(data[0]) in (list, tuple, List):
+        data = data[0]
+    if attributes:
+        att = attributes
+    else:
+        att = Rhino.DocObjects.ObjectAttributes()
+    for thing in data:
+        bakeMany(thing, att, transVect)
+    doc.Views.ActiveView.Redraw()
+
+def setView( sid ):
+    # still don't know how to set up the size of the viewport.
+    # this needs to be done manually
+    f = open('/amigos/db/%sview' % sid, 'rb')
+    view = pickle.load(f)
+    f.close()
+    if len(view) == 3:
+        geom = view[0]
+        vect = Rhino.Geometry.Vector3d(view[1])
+        targ = view[2]
+    else:
+        return 'bad view data'
+
+
+    vp = doc.Views.ActiveView.ActiveViewport
+    vp.SetCameraDirection( vect, True)
+    vp.SetCameraTarget(targ, True)
+    bb = geom.GetBoundingBox(True)
+    vp.ZoomBoundingBox( bb)
+    doc.Views.ActiveView.Redraw()
+    return view
+
+def bakePickle( path, layer=None, attributes=None, transVector=None):
+    if os.path.exists(path):
+        try:
+            f = open( path, 'rb' )
+            data = pickle.load(f)
+            f.close()
+            bakeRaw(data, attributes, transVector)
+            print 'baked %s to layer "%s"' % (path, layer)
+        except:
+            print 'trouble unpickling', path
+    else:
+        print '%s does not exist' % path
+
+def materialConfig( layerName, materialName):
+    print 'materials!'
+
+
+if __name__=='__main__':
+    from site_ids import ids
+
+    layers = {
+            'benchmeshes':[None,0.0],
+            #'activebusstops':[None,0.0],
+            #'siteoutline':[None,0.0],
+            #'pathways':[None,0.0],
+            'canopybreps':[None,0.0],
+            'drainareamesh':[None,-0.05],
+            #'draincurves':[None,0.0],
+            #'fullterrainmesh':[None,0.0],
+            #'terrainmesh':[None,0.0],
+            #'terrainmeshlines':[None,0.0],
+            'billboards':[None,0.0],
+            #'parcels':[None,0.0],
+            'hardscapemesh':[None,0.1],
+            }
+
+
+    i = 20
+
+    for sid in ids[i:i+1]:
+
+        print setView(sid)
+        FileTools.deleteAll()
+        for layer in layers:
+            dZ = layers[layer][1]
+            transVect = Rhino.Geometry.Vector3d(0.0,0.0, dZ)
+            print transVect
+            att = LayerTools.layerAttributes(layer)
+            path = '/amigos/db/%s%s' % (sid, layer)
+            bakePickle( path, layer, att, transVect)
+            if layers[layer][0]:
+                material = layers[layer][0]
+                print materialConfig(layer, material)
+
+
+
+
+
+
+
